@@ -25,6 +25,7 @@
 import bpy
 import mathutils
 from . import scene_utils
+from . import utils
 
 
 class NLA_Save:
@@ -145,7 +146,7 @@ class ProxyCopy_NlaStrip:
         self.fcurves = []
         # Since 3.5 interact to a NlaStripFCurves not linked to an object produce Blender Crash.
         for fcurve in nla_strip.fcurves:
-            self.fcurves.append(ProxyCopy_FCurve(fcurve))
+            self.fcurves.append(ProxyCopy_StripFCurve(fcurve))
         self.frame_end = nla_strip.frame_end
         if bpy.app.version >= (3, 3, 0):
             self.frame_end_ui = nla_strip.frame_end_ui
@@ -180,15 +181,14 @@ class ProxyCopy_NlaStrip:
         nla_strip.blend_type = self.blend_type
         nla_strip.extrapolation = self.extrapolation
         for fcurve in self.fcurves:
-            new_fcurve = nla_strip.fcurves.find(fcurve.data_path)  # Can't create so use find
-            fcurve.PasteDataOn(new_fcurve)
+            fcurve.paste_data_on(nla_strip)
         nla_strip.frame_end = self.frame_end
         if bpy.app.version >= (3, 3, 0):
             nla_strip.frame_end_ui = self.frame_end_ui
         nla_strip.frame_start = self.frame_start
         if bpy.app.version >= (3, 3, 0):
             nla_strip.frame_start_ui = self.frame_start_ui
-        nla_strip.influence = self.influence
+        nla_strip.influence = self.influence 
         # nla_strip.modifiers = self.modifiers #TO DO
         nla_strip.mute = self.mute
         # nla_strip.name = self.name
@@ -207,18 +207,121 @@ class ProxyCopy_NlaStrip:
             nla_strip.use_sync_length = self.use_sync_length
 
 
+class ProxyCopy_StripFCurve():
+    """
+    Proxy class for copying bpy.types.NlaStripFCurves. (NLA Strip only)
+
+    It is used to safely copy the bpy.types.NlaStripFCurves struct.
+    """
+
+    def __init__(self, fcurve: bpy.types.NlaStripFCurves):
+        self.data_path = fcurve.data_path
+        self.keyframe_points = []
+        for keyframe_point in fcurve.keyframe_points:
+            self.keyframe_points.append(ProxyCopy_Keyframe(keyframe_point))
+
+    def paste_data_on(self, strips: bpy.types.NlaStrips):
+        if self.data_path == "influence":
+            # Create the curve with use_animated_influence
+            strips.use_animated_influence = True 
+
+            for key in self.keyframe_points:
+                strips.influence = key.co[1]
+                strips.keyframe_insert(data_path="influence", frame=key.co[0], keytype=key.type)
+
+
+
 class ProxyCopy_FCurve():
     """
-    Proxy class for copying bpy.types.FCurve.
+    Proxy class for copying bpy.types.FCurve. 
 
     It is used to safely copy the bpy.types.FCurve struct.
     """
 
     def __init__(self, fcurve: bpy.types.FCurve):
         self.data_path = fcurve.data_path
+        self.keyframe_points = []
+        for keyframe_point in fcurve.keyframe_points:
+            self.keyframe_points.append(ProxyCopy_Keyframe(keyframe_point))
 
     def paste_data_on(self, fcurve: bpy.types.FCurve):
-        pass
+        fcurve.data_path = self.data_path
+        for keyframe_point in self.keyframe_points:
+            pass
+            #TODO
+
+
+class ProxyCopy_Keyframe():
+    """
+    Proxy class for copying bpy.types.Keyframe. (NLA Strip only)
+
+    It is used to safely copy the bpy.types.Keyframe struct.
+    """
+
+    def __init__(self, keyframe: bpy.types.Keyframe):
+        self.co = keyframe.co
+        self.type = keyframe.type
+
+    def paste_data_on(self, keyframe: bpy.types.Keyframe):
+        keyframe.co = self.co
+        keyframe.type = self.type
+
+
+
+def copy_attributes(a, b):
+    keys = dir(a)
+    for key in keys:
+        if not key.startswith("_") \
+        and not key.startswith("error_") \
+        and key != "group" \
+        and key != "strips" \
+        and key != "is_valid" \
+        and key != "rna_type" \
+        and key != "bl_rna":
+            try:
+                setattr(b, key, getattr(a, key))
+            except AttributeError:
+                pass
+
+
+def copy_drivers(src, dst):
+    # Copy drivers
+    if src.animation_data:
+        for d1 in src.animation_data.drivers:
+            d2 = dst.driver_add(d1.data_path)
+            copy_attributes(d1, d2)
+            copy_attributes(d1.driver, d2.driver)
+
+            # Remove default modifiers, variables, etc.
+            for m in d2.modifiers:
+                d2.modifiers.remove(m)
+            for v in d2.driver.variables:
+                d2.driver.variables.remove(v)
+
+            # Copy modifiers
+            for m1 in d1.modifiers:
+                m2 = d2.modifiers.new(type=m1.type)
+                copy_attributes(m1, m2)
+
+            # Copy variables
+            for v1 in d1.driver.variables:
+                v2 = d2.driver.variables.new()
+                copy_attributes(v1, v2)
+                for i in range(len(v1.targets)):
+                    copy_attributes(v1.targets[i], v2.targets[i])
+                    # Switch self reference targets to new self
+                    if v2.targets[i].id == src:
+                        v2.targets[i].id = dst
+
+            # Copy key frames
+            try:
+                for i in range(len(d1.keyframe_points)):
+                    d2.keyframe_points.add()
+                    k1 = d1.keyframe_points[i]
+                    k2 = d2.keyframe_points[i]
+                    copy_attributes(k1, k2)
+            except TypeError:
+                pass
 
 
 class AnimationManagment():
@@ -309,3 +412,162 @@ def reset_armature_pose(obj):
         b.rotation_euler = mathutils.Vector((0, 0, 0))
         b.scale = mathutils.Vector((1, 1, 1))
         b.location = mathutils.Vector((0, 0, 0))
+
+
+class ProxyCopy_Constraint:
+    """
+    Proxy class for copying Blender PoseBoneConstraints.
+
+    It is used to safely copy Blender PoseBoneConstraints.
+    """
+
+    def __init__(self, constraint):
+        """
+        Initializes the ProxyCopy_Constraint object.
+
+        Args:
+            constraint (bpy.types.Constraint): The constraint to copy.
+
+        Returns:
+            None
+        """
+        if constraint:
+            self.type = constraint.type
+            self.name = constraint.name
+            self.target = constraint.target
+            self.subtarget = constraint.subtarget
+            self.influence = constraint.influence
+            self.mute = constraint.mute
+            self.target_space = constraint.target_space
+            self.owner_space = constraint.owner_space
+            # Add more constraint parameters here as needed
+
+            if self.type == 'CHILD_OF':
+                self.inverse_matrix = constraint.inverse_matrix.copy() 
+
+
+    def paste_data_on(self, target_constraint):
+        """
+        Pastes the saved data onto the target constraint.
+
+        Args:
+            target_constraint (bpy.types.Constraint): The target constraint to apply the data to.
+
+        Returns:
+            None
+        """
+        if target_constraint:
+            #target_constraint.type = self.type
+            target_constraint.name = self.name
+            target_constraint.target = self.target
+            target_constraint.subtarget = self.subtarget
+            target_constraint.influence = self.influence
+            target_constraint.mute = self.mute
+            target_constraint.target_space = self.target_space
+            target_constraint.owner_space = self.owner_space
+            # Copy more constraint parameters here as needed
+
+            if self.type == 'CHILD_OF':
+                target_constraint.inverse_matrix = self.inverse_matrix 
+
+
+class BoneConstraintManagment():
+    """
+    Helper class for managing Bone Constraint data in Blender.
+    """
+
+    def __init__(self):
+        self.saved_constraints = []
+
+    def save_bone_constraints_data(self, armature, bone_name):
+        """
+        Saves the constraints data from an armature bone.
+
+        Args:
+            armature: The armature object where the bone is located.
+            bone_name: The name of the bone you want to save constraints for.
+        """
+        # Get the bone object from the armature
+        bone = armature.pose.bones.get(bone_name)
+
+        if bone:
+            # Clear the saved_constraints list to start fresh
+            self.saved_constraints.clear()
+
+            # Get the list of constraints on the bone and save them
+            for constraint in bone.constraints:
+                self.saved_constraints.append(ProxyCopy_Constraint(constraint))
+
+            #print(f"Constraints for bone {bone_name} saved successfully.")
+        else:
+            print(f"Bone {bone_name} not found in the armature.")
+
+
+    def set_bone_constraints_data(self, armature, bone_name, replace=True):
+        """
+        Sets the constraints data on the bone of an armature.
+
+        Args:
+            armature: The armature object where the bone is located.
+            bone_name: The name of the bone on which you want to set constraints.
+            replace: If True, replace existing constraints; if False, keep them and add saved constraints.
+        """
+        # Get the bone object from the armature
+        bone = armature.pose.bones.get(bone_name)
+
+        if bone:
+            if replace:
+                # Remove all existing constraints on the bone
+                for old_constraint in bone.constraints:
+                    bone.constraints.remove(old_constraint)
+
+            # Add the saved constraints to the bone
+            for constraint_data in self.saved_constraints:
+                new_constraint = bone.constraints.new(type=constraint_data.type)
+                constraint_data.paste_data_on(new_constraint)
+
+            print(f"Constraints for bone {bone_name} set successfully.")
+        else:
+            print(f"Bone {bone_name} not found in the armature.")
+
+class RigConstraintManagment():
+    """
+    Helper class for managing Rig Constraint data in Blender.
+    """
+
+    def __init__(self):
+        self.saved_bones_constraints = {}
+
+    def save_rig_constraints_data(self, armature, bone_names):
+        """
+        Saves the constraints data from an armature bone.
+
+        Args:
+            armature: The armature object where the bone is located.
+            bone_names: The names of the bones you want to save constraints for.
+        """
+        self.saved_bones_constraints.clear()
+
+        for bone_name in bone_names:
+            bone = armature.pose.bones.get(bone_name)
+            constraints = BoneConstraintManagment()
+            constraints.save_bone_constraints_data(armature, bone_name)
+
+            if bone:
+                self.saved_bones_constraints[bone_name] = constraints
+
+                #print(f"Constraints for bone {bone_name} saved successfully.")
+            else:
+                print(f"Bone {bone_name} not found in the armature.")
+
+
+    def set_rig_constraints_data(self, armature, replace=True):
+        """
+        Sets the constraints data on the bones of an armature.
+
+        Args:
+            armature: The armature object where the bones are located.
+            replace: If True, replace existing constraints; if False, keep them and add saved constraints.
+        """
+        for bone_name, constraints in self.saved_bones_constraints.items():
+            constraints.set_bone_constraints_data(armature, bone_name, replace)

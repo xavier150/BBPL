@@ -23,20 +23,25 @@
 # ----------------------------------------------
 
 import bpy
-import importlib
+from typing import List
 from . import types
 
-if "types" in locals():
-    importlib.reload(types)
-
-classes = (
-)
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
 
 
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+
+
+def add_string_selector(property_name, property_selector_name, default: str="", name: str="", description: str="", items=[], update=None) -> types.StringSelector:
+    my_string_selector = types.StringSelector(property_name, property_selector_name)
+    my_string_selector.name = name
+    my_string_selector.default = default
+    my_string_selector.description = description
+    my_string_selector.items = items
+    my_string_selector.update = update
+    my_string_selector.create_propertys()
+    return my_string_selector
+
+def draw_string_selector(owner, layout: bpy.types.UILayout, prop_name = "my_prop_id", selector_prop_name = "my_porp_id_selector", icon = "PREFERENCES"):
+    row = layout.row(align=True)
+    row.prop(owner, prop_name)
+    row.prop(owner, selector_prop_name, text="", icon=icon, icon_only=True)
+    return row

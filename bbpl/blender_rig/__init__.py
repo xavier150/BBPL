@@ -24,26 +24,23 @@
 
 import bpy
 import importlib
-from . import utils
-from . import types
+from . import rig_utils
+from .. import utils
 
-if "utils" in locals():
-    importlib.reload(utils)
-if "types" in locals():
-    importlib.reload(types)
+if "rig_utils" in locals():
+    importlib.reload(rig_utils)
+
 
 classes = (
 )
+
+
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    types.register()
-
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-
-    types.unregister()

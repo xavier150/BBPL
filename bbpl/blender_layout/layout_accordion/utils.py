@@ -23,27 +23,10 @@
 # ----------------------------------------------
 
 import bpy
-import importlib
-from . import utils
-from . import types
 
-if "utils" in locals():
-    importlib.reload(utils)
-if "types" in locals():
-    importlib.reload(types)
+from ... import __internal__
 
-classes = (
-)
+def get_class_name():
+    package_name = __internal__.utils.get_package_name()
+    return f"BBPL_UI_{package_name}_Accordion"
 
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-    types.register()
-
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-
-    types.unregister()

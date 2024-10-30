@@ -23,27 +23,13 @@
 # ----------------------------------------------
 
 import bpy
-import importlib
-from . import utils
-from . import types
+from ... import __internal__
 
-if "utils" in locals():
-    importlib.reload(utils)
-if "types" in locals():
-    importlib.reload(types)
+def get_template_button_idname(name):
+    return __internal__.utils.get_data_operator_idname("tpl_btn_" + name)
 
-classes = (
-)
+def get_template_button_class_name(name):
+    return __internal__.utils.get_operator_class_name("tpl_btn_" + name)
 
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-    types.register()
-
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-
-    types.unregister()
+def get_operator_class_name(name):
+    return __internal__.utils.get_operator_class_name(name)

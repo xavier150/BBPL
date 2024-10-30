@@ -29,6 +29,7 @@ import bpy
 import bmesh
 import addon_utils
 import pathlib
+from typing import Optional
 
 def is_deleted(obj):
     """
@@ -58,28 +59,6 @@ def check_plugin_is_activated(plugin_name):
     """
     is_enabled, is_loaded = addon_utils.check(plugin_name)
     return is_enabled and is_loaded
-
-
-
-def move_to_global_view():
-    """
-    Moves the active Blender viewport to the global view.
-
-    Returns:
-        None
-    """
-    for area in bpy.context.screen.areas:
-        if area.type == 'VIEW_3D':
-            space = area.spaces[0]
-            if space.local_view:  # check if using local view
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        # override context and switch to global view
-                        override = {'area': area, 'region': region}
-                        bpy.ops.view3d.localview(override)
-
-
-
 
 
 def checks_relationship(arrayA, arrayB):
@@ -137,9 +116,49 @@ def get_childs(obj):
     return childs_obj
 
 
-def get_root_bone_parent(bone):
+def get_armature_root_bone(obj):
     """
-    Retrieves the root bone parent of a given bone.
+    Retrieves the root bone of an armature object.
+
+    Args:
+        obj (bpy.types.Object): The armature object to find the root bone for.
+
+    Returns:
+        bpy.types.Bone: The root bone of the armature, or None if not found.
+    """
+    # Vérifie si l'objet est une armature et s'il a des données d'armature
+    if obj.type == 'ARMATURE' and obj.data:
+        armature = obj.data
+        
+        # Parcours tous les os de l'armature pour trouver le(s) root(s)
+        for bone in armature.bones:
+            if bone.parent is None:
+                return bone
+    return None
+
+
+def get_armature_root_bone(obj: bpy.types.Object) -> Optional[bpy.types.Bone]:
+    """
+    Retrieves the root bone of an armature object.
+
+    Args:
+        obj (bpy.types.Object): The armature object to find the root bone for.
+
+    Returns:
+        bpy.types.Bone: The root bone of the armature, or None if not found.
+    """
+    if obj.type == 'ARMATURE' and obj.data:
+        armature = obj.data
+        
+        for bone in armature.bones:
+            if bone.parent is None:
+                return bone
+    return None
+
+
+def get_root_bone_parent(bone: bpy.types.Bone) -> bpy.types.Bone:
+    """
+    Retrieves the root bone parent of a given bone by traversing the bone's parents.
 
     Args:
         bone (bpy.types.Bone): The bone to find the root bone parent for.
@@ -147,49 +166,29 @@ def get_root_bone_parent(bone):
     Returns:
         bpy.types.Bone: The root bone parent.
     """
-    if bone.parent is not None:
-        return get_root_bone_parent(bone.parent)
+    while bone.parent:
+        bone = bone.parent
     return bone
 
 
-def get_first_deform_bone_parent(bone):
+def get_first_deform_bone_parent(bone: bpy.types.Bone) -> Optional[bpy.types.Bone]:
     """
-    Retrieves the first deform bone parent of a given bone.
+    Retrieves the first deform bone parent of a given bone by traversing the bone's parents.
 
     Args:
         bone (bpy.types.Bone): The bone to find the first deform bone parent for.
 
     Returns:
-        bpy.types.Bone: The first deform bone parent.
+        bpy.types.Bone: The first deform bone parent, or None if not found.
     """
-    if bone.parent is not None:
-        if bone.use_deform is True:
+    while bone.parent:
+        if bone.use_deform:
             return bone
-        else:
-            return get_first_deform_bone_parent(bone.parent)
-    return bone
+        bone = bone.parent
+    return bone if bone.use_deform else None
 
 
-def set_collection_use(collection):
-    """
-    Sets the visibility and selectability of a collection.
-
-    Args:
-        collection (bpy.types.Collection): The collection to modify.
-
-    Returns:
-        None
-    """
-    collection.hide_viewport = False
-    collection.hide_select = False
-    layer_collection = bpy.context.view_layer.layer_collection
-    if collection.name in layer_collection.children:
-        layer_collection.children[collection.name].hide_viewport = False
-    else:
-        print(collection.name, "not found in view_layer.layer_collection")
-
-
-def get_recursive_childs(obj):
+def get_recursive_childs(target_obj):
     """
     Retrieves all recursive children of an object.
 
@@ -199,18 +198,19 @@ def get_recursive_childs(obj):
     Returns:
         list: A list of recursive children objects.
     """
+    def get_recursive_parent(parent, start_obj):
+        if start_obj.parent:
+            if start_obj.parent == parent:
+                return True
+            else:
+                if get_recursive_parent(parent, start_obj.parent):
+                    return True
+        return False
 
     save_objs = []
-
-    def try_append(obj):
-        if obj.name in bpy.context.scene.objects:
+    for obj in bpy.data.objects:
+        if get_recursive_parent(target_obj, obj):
             save_objs.append(obj)
-
-    for new_obj in get_childs(obj):
-        for child in get_recursive_childs(new_obj):
-            try_append(child)
-        try_append(new_obj)
-
     return save_objs
 
 
@@ -331,4 +331,34 @@ def set_windows_clipboard(text):
     bpy.context.window_manager.clipboard = text
     # bpy.context.window_manager.clipboard.encode('utf8')
 
+def get_obj_childs(obj):
+    # Get all direct childs of a object
 
+    ChildsObj = []
+    for childObj in bpy.data.objects:
+        if childObj.library is None:
+            pare = childObj.parent
+            if pare is not None:
+                if pare.name == obj.name:
+                    ChildsObj.append(childObj)
+
+    return ChildsObj
+
+def get_recursive_obj_childs(obj, include_self = False):
+    # Get all recursive childs of a object
+    # include_self is True obj is index 0
+
+    saveObjs = []
+
+    def tryAppend(obj):
+        if obj.name in bpy.context.scene.objects:
+            saveObjs.append(obj)
+
+    if include_self:
+        tryAppend(obj)
+
+    for newobj in get_obj_childs(obj):
+        for childs in get_recursive_obj_childs(newobj):
+            tryAppend(childs)
+        tryAppend(newobj)
+    return saveObjs

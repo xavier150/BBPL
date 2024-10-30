@@ -23,27 +23,6 @@
 # ----------------------------------------------
 
 import bpy
-import importlib
-from . import utils
-from . import types
+import mathutils
 
-if "utils" in locals():
-    importlib.reload(utils)
-if "types" in locals():
-    importlib.reload(types)
-
-classes = (
-)
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-    types.register()
-
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-
-    types.unregister()
+# TO DO

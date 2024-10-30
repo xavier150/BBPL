@@ -22,28 +22,32 @@
 #  XavierLoux.com
 # ----------------------------------------------
 
+
+import os
 import bpy
-import importlib
-from . import utils
-from . import types
-
-if "utils" in locals():
-    importlib.reload(utils)
-if "types" in locals():
-    importlib.reload(types)
-
-classes = (
-)
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-    types.register()
+import addon_utils
+from .. import __internal__
 
 
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+def get_addon_version(addon_name):
+    version = (0, 0, 0)
+    for mod in addon_utils.modules():
+        if mod.bl_info['name'] == addon_name:
+            return mod.bl_info.get('version', (0, 0, 0))
+    return version
 
-    types.unregister()
+def get_addon_version_str(addon_name):
+    version = get_addon_version(addon_name)
+    return '.'.join([str(x) for x in version])
+
+def get_addon_file(addon_name):
+    for mod in addon_utils.modules():
+        if mod.bl_info['name'] == addon_name:
+            return mod.__file__
+    return "Not Found"
+
+def get_addon_path(addon_name):
+    for mod in addon_utils.modules():
+        if mod.bl_info['name'] == addon_name:
+            return os.path.dirname(mod.__file__)
+    return "Not Found"

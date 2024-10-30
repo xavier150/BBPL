@@ -23,26 +23,10 @@
 # ----------------------------------------------
 
 import bpy
+from ... import __internal__
 
-class BBPL_UI_ExpendSection(bpy.types.PropertyGroup):
+def get_open_target_web_page_idname():
+    return __internal__.utils.get_object_operator_idname("open_target_web_page")
 
-    expend: bpy.props.BoolProperty(
-        name="Use",
-        description="Click to expand / collapse",
-        default=False
-    )
-    
-    def get_name(self):
-        prop_rna = self.id_data.bl_rna.properties[self.id_properties_ensure().name]
-        return prop_rna.name
-
-    def draw(self, layout: bpy.types.UILayout):
-        tria_icon = "TRIA_DOWN" if self.expend else "TRIA_RIGHT"
-        description = "Click to collapse" if self.expend else "Click to expand"
-        layout.row().prop(self, "expend", icon=tria_icon, icon_only=True, text=self.get_name(), emboss=False, toggle=True, expand=True)
-        if self.expend:
-            pass
-
-    def is_expend(self):
-        return self.expend
-
+def get_open_target_web_page_class_name():
+    return __internal__.utils.get_operator_class_name("OpenTargetWebPage")
