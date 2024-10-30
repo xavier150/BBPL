@@ -26,23 +26,19 @@ import bpy
 from . import utils
 from ... import __internal__
 
-def update_string_from_selector(self, context, string_selector):
-    if context.region.type != "UI":
-        return
+def update_string_from_selector(self, string_selector):
     string_name = string_selector.property_name
     selector_name = string_selector.property_selector_name
     if getattr(self, string_name) != getattr(self, selector_name):
         setattr(self, string_name, getattr(self, selector_name))
-        print("Selector update...")
+        #print("Selector update...")
 
-def update_selector_from_string(self, context, string_selector):
-    if context.region.type != "UI":
-        return
+def update_selector_from_string(self, string_selector):
     string_name = string_selector.property_name
     selector_name = string_selector.property_selector_name
     if getattr(self, selector_name) != getattr(self, string_name):
         setattr(self, selector_name, getattr(self, string_name))
-        print("Selector update...")
+        #print("Selector update...")
 
 class StringSelector():
 
@@ -53,6 +49,7 @@ class StringSelector():
         self.default = ""
         self.description = ""
         self.items = []
+        self.update = None
         self.string_property = None
         self.enum_selector = None
 
@@ -60,10 +57,15 @@ class StringSelector():
     def create_propertys(self):
         string_selector = self
         def string_update_wrapper(self, context):
-            update_selector_from_string(self, context, string_selector)
+            update_selector_from_string(self, string_selector)
+            if string_selector.update:
+                string_selector.update()
 
         def selector_update_wrapper(self, context):
-            update_string_from_selector(self, context, string_selector)
+            update_string_from_selector(self, string_selector)
+            if string_selector.update:
+                string_selector.update()
+            
 
         self.string_property = bpy.props.StringProperty(
             default=self.default,

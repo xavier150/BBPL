@@ -97,33 +97,19 @@ def copy_rig_group(obj, source):
     bpy.ops.object.modifier_apply(modifier=mod_name)
 
 
-def apply_auto_rig_parent(armature, target_objects, parent_type='ARMATURE_AUTO', use_only_bone_white_list=False, white_list_bones=None, black_list_bones=None):
+def apply_auto_rig_parent(armature, target_objects, parent_type='ARMATURE_AUTO', white_list_bones=[], black_list_bones=[]):
     """
     Apply an automatic rig parent to the target object using the armature.
     Optionally, specify a white list or black list of bones to control the deform flag.
     """
-    if white_list_bones is None:
-        white_list_bones = []
-    if black_list_bones is None:
-        black_list_bones = []
 
-    # Exit current mode
-    #if bpy.ops.object.mode_set.poll():
-    #    bpy.ops.object.mode_set(mode='OBJECT')
+    save_defom = save_defoms_bones(armature)
 
-    #bpy.ops.object.select_all(action='DESELECT')
-    #armature.select_set(state=True)
-    #target.select_set(state=True)
-    #bpy.context.view_layer.objects.active = armature
+    if len(white_list_bones) > 0:
+        set_all_bones_deforms(armature, False)
 
-    if len(white_list_bones) > 0 or len(black_list_bones) > 0:
-        save_defom = save_defoms_bones(armature)
-
-        if use_only_bone_white_list:
-            set_all_bones_deforms(armature, False)
-
-        set_bones_deforms(armature, white_list_bones, True)
-        set_bones_deforms(armature, black_list_bones, False)
+    set_bones_deforms(armature, white_list_bones, True)
+    set_bones_deforms(armature, black_list_bones, False)
 
     for obj in target_objects:
         for modifier in obj.modifiers:
@@ -146,5 +132,4 @@ def apply_auto_rig_parent(armature, target_objects, parent_type='ARMATURE_AUTO',
         bpy.ops.object.parent_set(override_context, type=parent_type)
 
 
-    if len(white_list_bones) > 0 or len(black_list_bones) > 0:
-        reset_deform_bones(armature, save_defom)
+    reset_deform_bones(armature, save_defom)

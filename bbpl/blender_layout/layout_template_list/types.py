@@ -70,7 +70,7 @@ def create_template_item_class():
     return BBPL_UI_TemplateItem
 
 def create_template_item_draw_class():
-    class BBPL_UI_TemplateItemDraw(bpy.types.UIList):
+    class BBPL_UL_TemplateItemDraw(bpy.types.UIList):
         def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 
             prop_line = layout
@@ -92,15 +92,14 @@ def create_template_item_draw_class():
             prop_data.prop(item, "name", text="")
             prop_data.enabled = item.use
 
-    BBPL_UI_TemplateItemDraw.__name__ = utils.get_operator_class_name("TemplateItemDraw")
-    return BBPL_UI_TemplateItemDraw
+    BBPL_UL_TemplateItemDraw.__name__ = utils.get_operator_class_name("TemplateItemDraw")
+    return BBPL_UL_TemplateItemDraw
 
 def create_template_list_class(TemplateItem, TemplateItemDraw):
     class BBPL_UI_TemplateList(bpy.types.PropertyGroup):
 
         template_collection: bpy.props.CollectionProperty(type = TemplateItem)
-        template_collection_uilist_class: bpy.props.StringProperty(default = TemplateItemDraw.__name__)
-        #template_collection_uilist_class: bpy.props.StringProperty(default = "BBPL_UI_TemplateItemDraw")
+        template_collection_uilist_class_name = TemplateItemDraw.__name__
         active_template_property: bpy.props.IntProperty(default = 0)
         rows: bpy.props.IntProperty(default = 6)
         maxrows: bpy.props.IntProperty(default = 6)
@@ -147,7 +146,7 @@ def create_template_list_class(TemplateItem, TemplateItemDraw):
         def draw(self, layout: bpy.types.UILayout):
             template_row = layout.row()
             template_row.template_list(
-                self.template_collection_uilist_class, "",  # type and unique id
+                self.template_collection_uilist_class_name, "",  # type and unique id
                 self, "template_collection",  # pointer to the CollectionProperty
                 self, "active_template_property",  # pointer to the active identifier
                 rows=self.rows,

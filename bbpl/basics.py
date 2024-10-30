@@ -29,6 +29,7 @@ import bpy
 import bmesh
 import addon_utils
 import pathlib
+from typing import Optional
 
 def is_deleted(obj):
     """
@@ -115,9 +116,49 @@ def get_childs(obj):
     return childs_obj
 
 
-def get_root_bone_parent(bone):
+def get_armature_root_bone(obj):
     """
-    Retrieves the root bone parent of a given bone.
+    Retrieves the root bone of an armature object.
+
+    Args:
+        obj (bpy.types.Object): The armature object to find the root bone for.
+
+    Returns:
+        bpy.types.Bone: The root bone of the armature, or None if not found.
+    """
+    # Vérifie si l'objet est une armature et s'il a des données d'armature
+    if obj.type == 'ARMATURE' and obj.data:
+        armature = obj.data
+        
+        # Parcours tous les os de l'armature pour trouver le(s) root(s)
+        for bone in armature.bones:
+            if bone.parent is None:
+                return bone
+    return None
+
+
+def get_armature_root_bone(obj: bpy.types.Object) -> Optional[bpy.types.Bone]:
+    """
+    Retrieves the root bone of an armature object.
+
+    Args:
+        obj (bpy.types.Object): The armature object to find the root bone for.
+
+    Returns:
+        bpy.types.Bone: The root bone of the armature, or None if not found.
+    """
+    if obj.type == 'ARMATURE' and obj.data:
+        armature = obj.data
+        
+        for bone in armature.bones:
+            if bone.parent is None:
+                return bone
+    return None
+
+
+def get_root_bone_parent(bone: bpy.types.Bone) -> bpy.types.Bone:
+    """
+    Retrieves the root bone parent of a given bone by traversing the bone's parents.
 
     Args:
         bone (bpy.types.Bone): The bone to find the root bone parent for.
@@ -125,46 +166,26 @@ def get_root_bone_parent(bone):
     Returns:
         bpy.types.Bone: The root bone parent.
     """
-    if bone.parent is not None:
-        return get_root_bone_parent(bone.parent)
+    while bone.parent:
+        bone = bone.parent
     return bone
 
 
-def get_first_deform_bone_parent(bone):
+def get_first_deform_bone_parent(bone: bpy.types.Bone) -> Optional[bpy.types.Bone]:
     """
-    Retrieves the first deform bone parent of a given bone.
+    Retrieves the first deform bone parent of a given bone by traversing the bone's parents.
 
     Args:
         bone (bpy.types.Bone): The bone to find the first deform bone parent for.
 
     Returns:
-        bpy.types.Bone: The first deform bone parent.
+        bpy.types.Bone: The first deform bone parent, or None if not found.
     """
-    if bone.parent is not None:
-        if bone.use_deform is True:
+    while bone.parent:
+        if bone.use_deform:
             return bone
-        else:
-            return get_first_deform_bone_parent(bone.parent)
-    return bone
-
-
-def set_collection_use(collection):
-    """
-    Sets the visibility and selectability of a collection.
-
-    Args:
-        collection (bpy.types.Collection): The collection to modify.
-
-    Returns:
-        None
-    """
-    collection.hide_viewport = False
-    collection.hide_select = False
-    layer_collection = bpy.context.view_layer.layer_collection
-    if collection.name in layer_collection.children:
-        layer_collection.children[collection.name].hide_viewport = False
-    else:
-        print(collection.name, "not found in view_layer.layer_collection")
+        bone = bone.parent
+    return bone if bone.use_deform else None
 
 
 def get_recursive_childs(target_obj):

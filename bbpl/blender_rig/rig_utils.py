@@ -60,45 +60,31 @@ def get_mirror_bone_name(original_bones):
     """
     Get the mirror bone name for the given bone(s).
     """
-    bones = []
-    new_bones = []
-
     if not isinstance(original_bones, list):
         bones = [original_bones]  # Convert to list
     else:
         bones = original_bones
 
     def try_to_invert_bones(bone):
-        def invert(bone, old, new):
-            if bone.endswith(old):
-                new_bone_name = bone[:-len(old)]
-                new_bone_name = new_bone_name + new
-                return new_bone_name
-            return None
-
         change = [
-            ["_l", "_r"],
-            ["_L", "_R"]
+            ("_l", "_r"),
+            ("_L", "_R")
         ]
-        for c in change:
-            a = invert(bone, c[0], c[1])
-            if a:
-                return a
-            b = invert(bone, c[1], c[0])
-            if b:
-                return b
 
-        # Return original If no invert found.
+        for old, new in change:
+            if bone.endswith(old):
+                return bone[:-len(old)] + new
+            elif bone.endswith(new):
+                return bone[:-len(new)] + old
+
+        # Return original if no invert found
         return bone
 
-    for bone in bones:
-        new_bones.append(try_to_invert_bones(bone))
+    # Using list comprehension for performance
+    new_bones = [try_to_invert_bones(bone) for bone in bones]
 
-    # Can return same bone when don't found mirror
-    if not isinstance(original_bones, list):
-        return new_bones[0]
-    else:
-        return new_bones
+    # Return a single element if the input was not a list
+    return new_bones[0] if not isinstance(original_bones, list) else new_bones
 
 
 def get_name_with_new_prefix(name, old_prefix, new_prefix):
@@ -504,6 +490,7 @@ def duplicate_bone(arm, bone_name, new_name=None):
     Returns:
         str: The name of the created bone.
     """
+
     edit_bone = arm.data.edit_bones[bone_name]
     if new_name is None:
         new_name = edit_bone.name + "_dup"

@@ -30,12 +30,13 @@ from . import types
 
 
 
-def add_string_selector(property_name, property_selector_name, default: str="", name: str="", description: str="", items=[]) -> types.StringSelector:
+def add_string_selector(property_name, property_selector_name, default: str="", name: str="", description: str="", items=[], update=None) -> types.StringSelector:
     my_string_selector = types.StringSelector(property_name, property_selector_name)
     my_string_selector.name = name
     my_string_selector.default = default
     my_string_selector.description = description
     my_string_selector.items = items
+    my_string_selector.update = update
     my_string_selector.create_propertys()
     return my_string_selector
 
