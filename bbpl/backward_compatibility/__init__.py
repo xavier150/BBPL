@@ -23,6 +23,7 @@
 # ----------------------------------------------
 
 import bpy
+from typing import List
 import importlib
 
 classes = (
@@ -63,7 +64,7 @@ class RigActionUpdater:
         self.remove_fcurve = 0
         self.print_log = False
 
-    def update_action_curve_data_path(self, action, old_data_paths, new_data_path, remove_if_already_exists=False):
+    def update_action_curve_data_path(self, action: bpy.types.Action, old_data_paths: List[str], new_data_path: str, remove_if_already_exists=False, show_debug=False):
         """
         Update the data paths of FCurves in a given action by replacing old data paths with a new one.
 
@@ -77,36 +78,40 @@ class RigActionUpdater:
         Returns:
             None
         """
-        cache_action_fcurves = []
-        cache_data_paths = []
+        cache_action_fcurves: List[bpy.types.FCurve] = []
+        cache_data_paths: List[str] = []
         for fcurve in action.fcurves:
             cache_action_fcurves.append(fcurve)
             cache_data_paths.append(fcurve.data_path)
             
-
         for action_fcurve in cache_action_fcurves:
             for old_data_path in old_data_paths:
                 current_target = action_fcurve.data_path
-                if old_data_path in current_target:
 
+                if old_data_path in current_target:
                     # ---
+                    if show_debug: 
+                        print(f"{old_data_path} found in {current_target} for action {action.name}.")
 
                     new_target = current_target.replace(old_data_path, new_data_path)
                     if new_target not in cache_data_paths:
                         action_fcurve.data_path = new_target
-                        if self.print_log:
+                        if self.print_log or show_debug:
                             print(f'"{current_target}" updated to "{new_target}" in {action.name} action.')
                         self.update_fcurve += 1
                     else:
                         if remove_if_already_exists:
                             action.fcurves.remove(action_fcurve)
-                            if self.print_log:
+                            if self.print_log or show_debug:
                                 print(f'"{current_target}" can not be updated to "{new_target}" in {action.name} action. (Alredy exist!) It was removed in {action.name} action.')
                             self.remove_fcurve += 1
                             break #FCurve removed so no neew to test the other old_var_names
                         else:
-                            if self.print_log:
+                            if self.print_log or show_debug:
                                 print(f'"{current_target}" can not be updated to "{new_target}" in {action.name} action. (Alredy exist!)')
+                else:
+                    if show_debug: 
+                        print(f"{old_data_path} not found in {current_target} for action {action.name}.")
 
     def remove_action_curve_by_data_path(self, action, data_paths):
         """

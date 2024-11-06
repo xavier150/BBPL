@@ -55,7 +55,6 @@ def create_safe_bone(arm, bone_name, context_id=None):
 
     return bone
 
-
 def get_mirror_bone_name(original_bones):
     """
     Get the mirror bone name for the given bone(s).
@@ -86,7 +85,6 @@ def get_mirror_bone_name(original_bones):
     # Return a single element if the input was not a list
     return new_bones[0] if not isinstance(original_bones, list) else new_bones
 
-
 def get_name_with_new_prefix(name, old_prefix, new_prefix):
     """
     Replace a prefix and add a new prefix to a name.
@@ -100,7 +98,6 @@ def get_name_with_new_prefix(name, old_prefix, new_prefix):
         raise TypeError('"' + old_prefix + '" not found as prefix in "' + name + '".')
     return new_bone_name
 
-
 def get_name_list_with_new_prefix(name_list, old_prefix, new_prefix):
     """
     Replace a prefix and add a new prefix to each name in a list.
@@ -110,7 +107,6 @@ def get_name_list_with_new_prefix(name_list, old_prefix, new_prefix):
     for name in name_list:
         new_list.append(get_name_with_new_prefix(name, old_prefix, new_prefix))
     return new_list
-
 
 def no_num(name):
     """
@@ -167,7 +163,6 @@ def change_current_layer(layer, source):
         if i != layer:
             source.layers[i] = False
 
-
 def change_select_layer(layer):
     """
     Change the active bone layer in the armature to the specified layer.
@@ -175,13 +170,11 @@ def change_select_layer(layer):
     layer_values = [layer == i for i in range(32)]
     bpy.ops.armature.bone_layers(layers=layer_values)
 
-
 def change_user_view_layer(layer):
     """
     Change the active layer in the user view to the specified layer.
     """
     change_current_layer(layer, bpy.context.object.data)
-
 
 def duplicate_rig_layer(armature, original_layer, new_layer, old_prefix, new_prefix):
     """
@@ -221,6 +214,7 @@ def duplicate_rig_layer(armature, original_layer, new_layer, old_prefix, new_pre
     armature.data.pose_position = 'POSE'  # Set the pose position back to pose mode
     return new_bone_names
 
+
 class Orig_prefixhanBone():
     """
     Create a new Orig_prefixhanBone instance.
@@ -254,7 +248,6 @@ def set_bone_orientation(armature, bone_name, vector, roll):
     bone.tail = bone.head + vector * length
     bone.roll = roll
 
-
 def get_bone_with_length(armature, bone_name, new_length, apply_tail=True):
     """
     Evaluate the edit_bone tail position with specific length
@@ -265,8 +258,6 @@ def get_bone_with_length(armature, bone_name, new_length, apply_tail=True):
 
     new_tail = bone.head + (vector * new_length)
     return new_tail
-
-
 
 def set_bone_length(armature, bone_name, new_length):
     """
@@ -288,7 +279,6 @@ def get_bone_vector(armature, bone_name):
     head = armature.data.edit_bones[bone_name].head
     tail = armature.data.edit_bones[bone_name].tail
     return head - tail
-
 
 def set_bone_scale(armature, bone_name, new_scale, apply_tail=True):
     """
@@ -321,7 +311,6 @@ def get_first_parent(bone):
         return get_first_parent(bone.parent)
     else:
         return bone
-
 
 def create_simple_stretch(armature, bone, target_bone_name, name):
     """
@@ -404,7 +393,6 @@ def create_bone_custom_property(armature, property_bone_name, property_name, def
     data_path = f'pose.bones["{escaped_property_bone_name}"]["{escaped_property_name}"]'
     return data_path
 
-
 def set_driver(armature, driver, bone_name, driver_name, clean_previous=True):
     """
     Sets up a driver for the specified bone and property in the armature.
@@ -422,7 +410,6 @@ def set_driver(armature, driver, bone_name, driver_name, clean_previous=True):
     v.targets[0].data_path = f'pose.bones["{escaped_bone_name}"]["{escaped_driver_name}"]'
     driver.expression = v.name
     return v
-
 
 def subdivise_one_bone(armature, bone_name, subdivise_prefix_name="Subdivise_", split_number=2, keep_parent=True, ):
     """
@@ -477,7 +464,6 @@ def subdivise_one_bone(armature, bone_name, subdivise_prefix_name="Subdivise_", 
     # Final reparenting
     return chain
 
-
 def duplicate_bone(arm, bone_name, new_name=None):
     """
     Creates a duplicate bone in the armature.
@@ -514,7 +500,6 @@ def duplicate_bone(arm, bone_name, new_name=None):
 
     return new_bone.name
 
-
 def copy_constraint(armature, copy_bone_name, paste_bone_name, clear=True):
     """
     Copies constraints from one bone to another in the armature.
@@ -541,12 +526,9 @@ def copy_constraint(armature, copy_bone_name, paste_bone_name, clear=True):
 
     # armature.pose.bones[paste_bone].constraints = armature.pose.bones[copy_bone].constraints
 
-
-
 def set_bones_lock(armature, bone_names, lock):
     for bone_name in bone_names:
         set_bone_lock(armature, bone_name, lock)
-
 
 def set_bone_lock(armature, bone_name, lock):
     # Check if we are in Pose mode

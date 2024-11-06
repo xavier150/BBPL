@@ -30,6 +30,7 @@ from . import blender_layout
 from . import backward_compatibility
 from . import blender_rig
 from . import blender_addon
+from . import save_data
 from . import blender_extension
 from . import basics
 from . import utils
@@ -51,6 +52,8 @@ if "blender_addon" in locals():
     importlib.reload(blender_addon)
 if "blender_extension" in locals():
     importlib.reload(blender_extension)
+if "save_data" in locals():
+    importlib.reload(save_data)
 if "basics" in locals():
     importlib.reload(basics)
 if "utils" in locals():

@@ -27,142 +27,6 @@ import copy
 import bpy
 import mathutils
 
-
-class SavedObject():
-    """
-    Saved data from a blender object.
-    """
-
-    def __init__(self, obj: bpy.types.Object):
-        if obj:
-            self.ref = obj
-            self.name = obj.name
-            self.select = obj.select_get()
-            self.hide = obj.hide_get()
-            self.hide_select = obj.hide_select
-            self.hide_viewport = obj.hide_viewport
-
-
-class SavedBones():
-    """
-    Saved data from a blender armature bone.
-    """
-
-    def __init__(self, bone):
-        if bone:
-            self.name = bone.name
-            self.select = bone.select
-            self.hide = bone.hide
-
-
-class SavedCollection():
-    """
-    Saved data from a blender collection.
-    """
-
-    def __init__(self, col):
-        if col:
-            self.ref = col
-            self.name = col.name
-            self.hide_select = col.hide_select
-            self.hide_viewport = col.hide_viewport
-
-
-class SavedViewLayerChildren():
-    """
-    Saved data from a blender ViewLayerChildren.
-    """
-
-    def __init__(self, vlayer, childCol):
-        if childCol:
-            self.vlayer_name = vlayer.name
-            self.name = childCol.name
-            self.exclude = childCol.exclude
-            self.hide_viewport = childCol.hide_viewport
-
-
-class UserSelectSave():
-    """
-    Manager for user selection.
-    """
-
-    def __init__(self):
-        # Select
-        self.user_active = None
-        self.user_active_name = ""
-        self.user_selecteds = []
-        self.user_selected_names = []
-
-        # Stats
-        self.user_mode = None
-
-    def save_current_select(self):
-        """
-        Save user selection.
-        """
-
-        # Save data (This can take time)
-
-        # Select
-        self.user_active = bpy.context.active_object  # Save current active object
-        if self.user_active:
-            self.user_active_name = self.user_active.name
-
-        self.user_selecteds = bpy.context.selected_objects  # Save current selected objects
-        self.user_selected_names = [obj.name for obj in bpy.context.selected_objects]
-
-
-    def reset_select_by_ref(self):
-        """
-        Reset user selection at the last save. (Use objects refs)
-        """
-
-        self.save_mode()
-        safe_mode_set("OBJECT", bpy.ops.object)
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj in bpy.data.objects:  # Resets previous selected object if still exist
-            if obj in self.user_selecteds:
-                obj.select_set(True)
-
-        bpy.context.view_layer.objects.active = self.user_active
-
-        self.reset_mode_at_save()
-
-    def reset_select_by_name(self):
-        """
-        Reset user selection at the last save. (Use objects names)
-        """
-
-        self.save_mode()
-        safe_mode_set("OBJECT", bpy.ops.object)
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj in bpy.data.objects:
-            if obj.name in self.user_selected_names:
-                if obj.name in bpy.context.view_layer.objects:
-                    bpy.data.objects[obj.name].select_set(True)  # Use the name because can be duplicated name
-
-        if self.user_active_name != "":
-            if self.user_active_name in bpy.data.objects:
-                if self.user_active_name in bpy.context.view_layer.objects:
-                    bpy.context.view_layer.objects.active = bpy.data.objects[self.user_active_name]
-
-        self.reset_mode_at_save()
-
-    def save_mode(self):
-        """
-        Save user mode.
-        """
-        if self.user_active:
-            if bpy.ops.object.mode_set.poll():
-                self.user_mode = self.user_active.mode  # Save current mode
-
-    def reset_mode_at_save(self):
-        """
-        Reset user mode at the last save.
-        """
-        if self.user_mode:
-            safe_mode_set(self.user_mode, bpy.ops.object)
-
 def select_specific_object(obj: bpy.types.Object):
     """
     Selects a specific object in Blender.
@@ -178,170 +42,6 @@ def select_specific_object(obj: bpy.types.Object):
     if obj.name in bpy.context.window.view_layer.objects:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
-
-
-class UserSceneSave():
-    """
-    Manager for saving and resetting the user scene.
-    """
-
-    def __init__(self):
-        # Select
-        self.user_select_class = UserSelectSave()
-
-        self.user_bone_active = None
-        self.user_bone_active_name = ""
-
-        # Stats
-        self.user_mode = None
-        self.use_simplify = False
-
-        # Data
-        self.objects = []
-        self.object_bones = []
-        self.collections = []
-        self.view_layer_collections = []
-        self.action_names = []
-        self.collection_names = []
-
-    def save_current_scene(self):
-        """
-        Save the current scene data.
-        """
-        # Save data (This can take time)
-        c = bpy.context
-        # Select
-        self.user_select_class.save_current_select()
-
-        # Stats
-        if self.user_select_class.user_active:
-            if bpy.ops.object.mode_set.poll():
-                self.user_mode = self.user_select_class.user_active.mode  # Save current mode
-        self.use_simplify = bpy.context.scene.render.use_simplify
-
-        # Data
-        for obj in bpy.data.objects:
-            self.objects.append(SavedObject(obj))
-        for col in bpy.data.collections:
-            self.collections.append(SavedCollection(col))
-        for vlayer in c.scene.view_layers:
-            layer_collections = get_layer_collections_recursive(vlayer.layer_collection)
-            for layer_collection in layer_collections:
-                self.view_layer_collections.append(SavedViewLayerChildren(vlayer, layer_collection))
-        for action in bpy.data.actions:
-            self.action_names.append(action.name)
-        for collection in bpy.data.collections:
-            self.collection_names.append(collection.name)
-
-        # Data for armature
-        if self.user_select_class.user_active:
-            if self.user_select_class.user_active.type == "ARMATURE":
-                if self.user_select_class.user_active.data.bones.active:
-                    self.user_bone_active = self.user_select_class.user_active.data.bones.active
-                    self.user_bone_active_name = self.user_select_class.user_active.data.bones.active.name
-                for bone in self.user_select_class.user_active.data.bones:
-                    self.object_bones.append(SavedBones(bone))
-
-    def reset_select_by_ref(self):
-        """
-        Reset the user selection based on object references.
-        """
-        self.user_select_class.reset_select_by_ref()
-        self.reset_bones_select_by_name()
-
-    def reset_select_by_name(self):
-        """
-        Reset the user selection based on object names.
-        """
-        self.user_select_class.reset_select_by_name()
-        self.reset_bones_select_by_name()
-
-    def reset_bones_select_by_name(self):
-        """
-        Reset bone selection by name (works only in pose mode).
-        """
-        # Work only in pose mode!
-        if len(self.object_bones) > 0:
-            if self.user_select_class.user_active:
-                if bpy.ops.object.mode_set.poll():
-                    if self.user_select_class.user_active.mode == "POSE":
-                        bpy.ops.pose.select_all(action='DESELECT')
-                        for bone in self.object_bones:
-                            if bone.select:
-                                if bone.name in self.user_select_class.user_active.data.bones:
-                                    self.user_select_class.user_active.data.bones[bone.name].select = True
-
-                        if self.user_bone_active_name is not None:
-                            if self.user_bone_active_name in self.user_select_class.user_active.data.bones:
-                                new_active = self.user_select_class.user_active.data.bones[self.user_bone_active_name]
-                                self.user_select_class.user_active.data.bones.active = new_active
-
-    def reset_mode_at_save(self):
-        """
-        Reset the user mode at the last save.
-        """
-        if self.user_mode:
-            safe_mode_set(self.user_mode, bpy.ops.object)
-
-    def reset_scene_at_save(self, print_removed_items = False):
-        """
-        Reset the user scene to at the last save.
-        """
-        scene = bpy.context.scene
-        self.reset_mode_at_save()
-
-        bpy.context.scene.render.use_simplify = self.use_simplify
-
-        # Reset hide and select (bpy.data.objects)
-        for obj in self.objects:
-            try:
-                if obj.ref:
-                    if obj.ref.hide_select != obj.hide_select:
-                        obj.ref.hide_select = obj.hide_select
-                    if obj.ref.hide_viewport != obj.hide_viewport:
-                        obj.ref.hide_viewport = obj.hide_viewport
-                    if obj.ref.hide_get() != obj.hide:
-                        obj.ref.hide_set(obj.hide)
-                else:
-                    if print_removed_items:
-                        print(f"/!\\ {obj.name} not found.")
-            except ReferenceError:
-                if print_removed_items:
-                    print(f"/!\\ {obj.name} has been removed.")
-
-        # Reset hide and select (bpy.data.collections)
-        for col in self.collections:
-            try:
-                if col.ref.name in bpy.data.collections:
-                    if col.ref.hide_select != col.hide_select:
-                        col.ref.hide_select = col.hide_select
-                    if col.ref.hide_viewport != col.hide_viewport:
-                        col.ref.hide_viewport = col.hide_viewport
-                else:
-                    if print_removed_items:
-                        print(f"/!\\ {col.name} not found.")
-            except ReferenceError:
-                if print_removed_items:
-                    print(f"/!\\ {col.name} has been removed.")
-
-        # Reset hide and viewport (collections from view_layers)
-        for vlayer in scene.view_layers:
-            layer_collections = get_layer_collections_recursive(vlayer.layer_collection)
-
-            def get_layer_collection_in_list(name, collections):
-                for layer_collection in collections:
-                    if layer_collection.name == name:
-                        return layer_collection
-
-            for view_layer_collection in self.view_layer_collections:
-                if view_layer_collection.vlayer_name == vlayer.name:
-                    layer_collection = get_layer_collection_in_list(view_layer_collection.name, layer_collections)
-                    if layer_collection:
-                        if layer_collection.exclude != view_layer_collection.exclude:
-                            layer_collection.exclude = view_layer_collection.exclude
-                        if layer_collection.hide_viewport != view_layer_collection.hide_viewport:
-                            layer_collection.hide_viewport = view_layer_collection.hide_viewport
-
 
 class UserArmatureDataSave():
     """
@@ -712,7 +412,6 @@ class SaveUserRenderSimplify():
     def LoadUserRenderSimplify(self):
         bpy.context.scene.render.use_simplify = self.use_simplify
 
-
 class SaveObjectReferanceUser():
     """
     This class is used to save and update references to an object in constraints 
@@ -795,3 +494,104 @@ def found_type_in_selection(targetType, include_active=True):
         if obj.type == targetType:
             return True
     return False
+
+def get_bone_path(armature: bpy.types.Object, start_bone_name: str, end_bone_name: str):
+    """
+    Returns a list of bone names between start_bone and end_bone in an armature.
+    
+    :param armature: The armature object.
+    :param start_bone_name: The name of the starting bone.
+    :param end_bone_name: The name of the ending bone.
+    :return: List of bone names between start_bone and end_bone, or an empty list if no path is found.
+    """
+
+    # Access bones directly.
+    if armature.mode == 'EDIT':
+        bones = armature.data.edit_bones
+    else:
+        bones = armature.data.bones
+
+    # Initialize the bones
+    start_bone = bones[start_bone_name]
+    end_bone = bones[end_bone_name]
+
+    # Depth-First Search to find the path from start_bone to end_bone
+    def find_path(current_bone, path):
+        path.append(current_bone.name)
+
+        # Check if we've reached the end bone
+        if current_bone == end_bone:
+            return path
+
+        # Explore each child recursively
+        for child in current_bone.children:
+            result = find_path(child, path[:])  # Use a copy of the current path
+            if result:  # If a valid path is found, return it
+                return result
+        
+        return None  # Return None if no path is found from this branch
+
+    # Start the recursive search
+    all_bones = find_path(start_bone, [])
+    return all_bones
+
+    
+def get_bone_path_to_end(armature: bpy.types.Object, start_bone_name: str):
+    """
+    Returns a list of bone names from the start_bone to the last child in a chain.
+    
+    :param armature: The armature object.
+    :param start_bone_name: The name of the starting bone.
+    :return: List of bone names from start_bone to the last child.
+    """
+
+    # Access bones directly.
+    if armature.mode == 'EDIT':
+        bones = armature.data.edit_bones
+    else:
+        bones = armature.data.bones
+
+    # Initialize the bones
+    start_bone = bones[start_bone_name]
+
+    # Traverse bones from start_bone to the last child in the chain
+    current_bone = start_bone
+    bone_path = [current_bone.name]
+
+    while current_bone.children:
+        # Use first child only
+        current_bone = current_bone.children[0]
+        bone_path.append(current_bone.name)
+
+    return bone_path
+
+def get_bone_and_children(armature: bpy.types.Object, start_bone_name: str):
+    """
+    Returns a list of all descendant bones of the specified start_bone, including all children recursively.
+    
+    :param armature: The armature object.
+    :param start_bone_name: The name of the starting bone.
+    :return: List of bone names, including the start bone and all its descendants.
+    """
+
+    # Access bones directly.
+    if armature.mode == 'EDIT':
+        bones = armature.data.edit_bones
+    else:
+        bones = armature.data.bones
+
+    # Initialize the bones
+    bones = armature.data.edit_bones
+    start_bone = bones.get(start_bone_name)
+    
+
+    # Recursive function to collect all children bones
+    def collect_children(bone):
+        bone_list = [bone.name]
+        for child in bone.children:
+            bone_list.extend(collect_children(child))
+        return bone_list
+
+    # Get all bones starting from the start_bone
+    all_bones = collect_children(start_bone)
+    return all_bones
