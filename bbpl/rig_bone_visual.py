@@ -156,7 +156,7 @@ def generate_bone_shape_from_prop(
     bone = armature.data.bones.get(bone_name)
     new_shape_name = "Shape_CustomGeneratedShape_" + bone_name
 
-    # Vérifier si la forme existe et la supprimer le cas échéant
+    # Check in all blender objs the form exists and delete it if so
     if new_shape_name in bpy.data.objects:
         bpy.data.objects.remove(bpy.data.objects[new_shape_name], do_unlink=True)
 

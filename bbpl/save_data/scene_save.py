@@ -41,12 +41,13 @@ class SavedObject():
             self.hide_select = obj.hide_select
             self.hide_viewport = obj.hide_viewport
 
-    def get_obj(self, use_names: bool = False)-> bpy.types.Object:    
+    def get_obj(self, use_names: bool = False)-> bpy.types.Object:  
+        scene = bpy.context.scene  
         if use_names:
             if self.name != "":
-                if self.name in bpy.data.objects:
+                if self.name in scene.objects:
                     if self.name in bpy.context.view_layer.objects:
-                        return bpy.data.objects[self.name]
+                        return scene.objects[self.name]
             return None
         else:
             return self.ref
@@ -129,7 +130,8 @@ class UserSceneSave():
         Save the current scene data.
         """
         # Save data (This can take time)
-        c = bpy.context
+        scene = bpy.context.scene
+
         # Select
         self.user_select_class.save_current_select()
 
@@ -140,11 +142,11 @@ class UserSceneSave():
         self.use_simplify = bpy.context.scene.render.use_simplify
 
         # Data
-        for obj in bpy.data.objects:
+        for obj in scene.objects:
             self.objects.append(SavedObject(obj))
         for col in bpy.data.collections:
             self.collections.append(SavedCollection(col))
-        for vlayer in c.scene.view_layers:
+        for vlayer in scene.view_layers:
             layer_collections = utils.get_layer_collections_recursive(vlayer.layer_collection)
             for layer_collection in layer_collections:
                 self.view_layer_collections.append(SavedViewLayerChildren(vlayer, layer_collection))
@@ -206,7 +208,7 @@ class UserSceneSave():
 
         bpy.context.scene.render.use_simplify = self.use_simplify
 
-        # Reset hide and select (bpy.data.objects)
+        # Reset hide and select
         for obj in self.objects:
             try:
                 obj_ref = obj.get_obj(use_names)

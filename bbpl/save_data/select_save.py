@@ -61,24 +61,25 @@ class UserSelectSave():
         Reset user selection at the last save.
         """
 
+        scene = bpy.context.scene
         self.save_mode(use_names)
         utils.safe_mode_set("OBJECT", bpy.ops.object)
         bpy.ops.object.select_all(action='DESELECT')
 
         if use_names:
-            for obj in bpy.data.objects:
+            for obj in scene.objects:
                 if obj.name in self.user_selected_names:
                     if obj.name in bpy.context.view_layer.objects:
-                        bpy.data.objects[obj.name].select_set(True)  # Use the name because can be duplicated name
+                        scene.objects.get(obj.name).select_set(True)  # Use the name because can be duplicated name
 
             if self.user_active_name != "":
-                if self.user_active_name in bpy.data.objects:
+                if self.user_active_name in scene.objects:
                     if self.user_active_name in bpy.context.view_layer.objects:
-                        bpy.context.view_layer.objects.active = bpy.data.objects[self.user_active_name]
+                        bpy.context.view_layer.objects.active = scene.objects.get(self.user_active_name)
         
         
         else:
-            for obj in bpy.data.objects:  # Resets previous selected object if still exist
+            for obj in scene.objects:  # Resets previous selected object if still exist
                 if obj in self.user_selecteds:
                     obj.select_set(True)
 
@@ -104,11 +105,12 @@ class UserSelectSave():
             utils.safe_mode_set(self.user_mode, bpy.ops.object)
 
     def get_user_active(self, use_names: bool = False):
+        scene = bpy.context.scene
         if use_names:
             if self.user_active_name != "":
-                if self.user_active_name in bpy.data.objects:
+                if self.user_active_name in scene.objects:
                     if self.user_active_name in bpy.context.view_layer.objects:
-                        return bpy.data.objects[self.user_active_name]
+                        return scene.objects.get(self.user_active_name)
             return None
         else:
             return self.user_active
