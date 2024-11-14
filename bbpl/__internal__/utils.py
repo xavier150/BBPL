@@ -23,20 +23,16 @@
 # ----------------------------------------------
 
 import bpy
+from .. import __package__ as base_package
 
 def get_package_name():
-    package_name = __package__
-
     # Before 4.2 __package__ will look like that: 
-    # my_blender_addon.bbpl.blender_extension
+    # my_blender_addon.bbpl.__internal__
 
     # After 4.2 __package__ will look like that: 
-    # bl_ext.user_default.my_blender_addon.bbpl.blender_extension
+    # bl_ext.user_default.my_blender_addon.bbpl.__internal__
 
-    if bpy.app.version >= (4, 2, 0):
-        package_name = package_name.split(".")[2]
-    else:
-        package_name = package_name.split(".")[0]
+    package_name = base_package.split(".")[-1]
     return package_name
 
 def get_reduced_package_name():

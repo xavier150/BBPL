@@ -25,21 +25,23 @@
 
 import os
 import bpy
-from .. import __internal__
+from ... import __package__ as base_package
 
-def get_package_version(pkg_id = None):
-    if pkg_id == None:
-        pkg_id = __internal__.utils.get_package_name()
-
+def get_package_version(pkg_idname = None, repo_module = 'user_default'):
     if bpy.app.version < (4, 2, 0):
         print("Blender extensions are not supported under 4.2. Please use bbpl.blender_addon.addon_utils instead.")
         return None
     
-    version = None
-
-    # @TODO this look like a bad way to do this. Need found how use bpy.ops.extensions.
-    file_path = os.path.join(bpy.utils.user_resource('EXTENSIONS'), 'user_default', pkg_id, "blender_manifest.toml")
+    manifest_filename = "blender_manifest.toml"
     
+    if pkg_idname:
+        file_path = os.path.join(bpy.utils.user_resource('EXTENSIONS'), repo_module, pkg_idname, manifest_filename)
+    else:
+        from addon_utils import _extension_module_name_decompose
+        repo_module, pkg_idname = _extension_module_name_decompose(base_package)
+        file_path = os.path.join(bpy.utils.user_resource('EXTENSIONS'), repo_module, pkg_idname, manifest_filename)
+    
+    version = None
     if os.path.isfile(file_path):
         with open(file_path, 'r') as file:
             for line in file:
@@ -51,13 +53,15 @@ def get_package_version(pkg_id = None):
     
     return version
 
-def get_package_path(pkg_id = None):
-    if pkg_id == None:
-        pkg_id = __internal__.utils.get_package_name()
-
+def get_package_path(pkg_idname = None, repo_module = 'user_default'):
     if bpy.app.version < (4, 2, 0):
         print("Blender extensions are not supported under 4.2. Please use bbpl.blender_addon.addon_utils instead.")
         return None
 
-    # @TODO this look like a bad way to do this. Need found how use bpy.ops.extensions.
-    return os.path.join(bpy.utils.user_resource('EXTENSIONS'), 'user_default', pkg_id)
+    if pkg_idname:
+        return os.path.join(bpy.utils.user_resource('EXTENSIONS'), repo_module, pkg_idname)
+    else:
+        from addon_utils import _extension_module_name_decompose
+        repo_module, pkg_idname = _extension_module_name_decompose(base_package)
+        return os.path.join(bpy.utils.user_resource('EXTENSIONS'), repo_module, pkg_idname)
+
