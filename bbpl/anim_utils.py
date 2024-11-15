@@ -284,11 +284,21 @@ def copy_attributes(a, b):
                 pass
 
 
-def copy_drivers(src, dst):
+def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
     # Copy drivers
+    print("S1->", src, dst)
     if src.animation_data:
         for d1 in src.animation_data.drivers:
-            d2 = dst.driver_add(d1.data_path)
+
+            source_data_path = d1.data_path
+            prop = src.path_resolve(source_data_path, False)
+            if isinstance(prop, bpy.types.bpy_prop_array):
+                # Array Drivers
+                d2 = dst.driver_add(source_data_path ,d1.array_index)
+            else:
+                # Simple Drivers
+                d2 = dst.driver_add(source_data_path)
+
             copy_attributes(d1, d2)
             copy_attributes(d1.driver, d2.driver)
 
