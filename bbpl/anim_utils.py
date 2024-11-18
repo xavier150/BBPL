@@ -268,28 +268,108 @@ class ProxyCopy_Keyframe():
 
 
 
-def copy_attributes(a, b):
-    keys = dir(a)
+def copy_attributes(a, b, priority_vars = [], ignore_list = [], print_fails = True):
+    def copyattr(source, target, attr_name):
+        try:
+            setattr(target, attr_name, getattr(source, attr_name))
+        except AttributeError as e:
+            if print_fails:
+                print(f"Error copying attribute '{attr_name}' from {str(source)} to from {str(target)}")
+                print(f": {e}")
+    
+    # Filter only attributes (not functions)
+    keys = [key for key in dir(a) if not callable(getattr(a, key))]
+
+    for priority_var in priority_vars:
+        if priority_var not in ignore_list:
+            if priority_var in keys:
+                copyattr(a, b, priority_var)
+
     for key in keys:
-        if not key.startswith("_") \
-        and not key.startswith("error_") \
-        and key != "group" \
-        and key != "strips" \
-        and key != "is_valid" \
-        and key != "rna_type" \
-        and key != "bl_rna":
-            try:
-                setattr(b, key, getattr(a, key))
-            except AttributeError:
-                pass
+        if key not in ignore_list:
+            if not key.startswith("_") \
+            and not key.startswith("error_") \
+            and key != "rna_type" \
+            and key != "bl_rna":
+                copyattr(a, b, key)
+
+def copy_fcurve_attr(a :bpy.types.FCurve, b :bpy.types.FCurve, print_fails = True):
+    if not isinstance(a, bpy.types.FCurve) or not isinstance(b, bpy.types.FCurve):
+        raise TypeError(f"Expected 'bpy.types.FCurve', but got {type(a).__name__} and {type(b).__name__}")
+    priority_vars = []
+    ignore_list = [
+        "driver",
+        "is_empty",
+        "keyframe_points",
+        "modifiers",
+        "sampled_points",
+        "group",
+    ]
+
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
+def copy_modifier_attr(a :bpy.types.FModifierGenerator, b :bpy.types.FModifierGenerator, print_fails = True):
+    if not isinstance(a, bpy.types.FModifierGenerator) or not isinstance(b, bpy.types.FModifierGenerator):
+        raise TypeError(f"Expected 'bpy.types.FModifierGenerator', but got {type(a).__name__} and {type(b).__name__}")
+    priority_vars = []
+    ignore_list = [
+        'type',
+        "is_valid",
+    ]
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
+def copy_keyframepoints_attr(a :bpy.types.FCurveKeyframePoints, b :bpy.types.FCurveKeyframePoints, print_fails = True):
+    if not isinstance(a, bpy.types.FCurveKeyframePoints) or not isinstance(b, bpy.types.FCurveKeyframePoints):
+        raise TypeError(f"Expected 'bpy.types.FCurveKeyframePoints', but got {type(a).__name__} and {type(b).__name__}")
+    priority_vars = []
+    ignore_list = []
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
+def copy_driver_attr(a: bpy.types.Driver, b: bpy.types.Driver, print_fails = True):
+    if not isinstance(a, bpy.types.Driver) or not isinstance(b, bpy.types.Driver):
+        raise TypeError(f"Expected 'bpy.types.Driver', but got {type(a).__name__} and {type(b).__name__}")
+    priority_vars = []
+    ignore_list = [
+        "is_simple_expression",
+        "variables",
+    ]
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
+def copy_drivertarget_attr(a: bpy.types.DriverTarget, b: bpy.types.DriverTarget, print_fails = True):
+
+    if not isinstance(a, bpy.types.DriverTarget) or not isinstance(b, bpy.types.DriverTarget):
+        raise TypeError(f"Expected 'bpy.types.DriverTarget', but got {type(a).__name__} and {type(b).__name__}")
+
+    # The value id_type must be set first! 
+    # In some case id_type may read only depending DriverVariable.type
+
+    priority_vars = [
+        'id_type',
+    ]
+    ignore_list = [
+        'is_fallback_used',
+    ]
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
+def copy_drivervariable_attr(a: bpy.types.DriverVariable, b: bpy.types.DriverVariable, print_fails = True):
+    if not isinstance(a, bpy.types.DriverVariable) or not isinstance(b, bpy.types.DriverVariable):
+        raise TypeError(f"Expected 'bpy.types.DriverVariable', but got {type(a).__name__} and {type(b).__name__}")
+    priority_vars = []
+    ignore_list = [
+        "is_name_valid",
+        "targets",
+        "id_type",
+    ]
+    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
+
 
 
 def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
+    print_fails = False
+    
     # Copy drivers
-    print("S1->", src, dst)
     if src.animation_data:
         for d1 in src.animation_data.drivers:
-
             source_data_path = d1.data_path
             prop = src.path_resolve(source_data_path, False)
             if isinstance(prop, bpy.types.bpy_prop_array):
@@ -299,8 +379,8 @@ def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
                 # Simple Drivers
                 d2 = dst.driver_add(source_data_path)
 
-            copy_attributes(d1, d2)
-            copy_attributes(d1.driver, d2.driver)
+            copy_fcurve_attr(d1, d2, print_fails)
+            copy_driver_attr(d1.driver, d2.driver, print_fails)
 
             # Remove default modifiers, variables, etc.
             for m in d2.modifiers:
@@ -311,14 +391,14 @@ def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
             # Copy modifiers
             for m1 in d1.modifiers:
                 m2 = d2.modifiers.new(type=m1.type)
-                copy_attributes(m1, m2)
+                copy_modifier_attr(m1, m2, print_fails)
 
             # Copy variables
             for v1 in d1.driver.variables:
                 v2 = d2.driver.variables.new()
-                copy_attributes(v1, v2)
+                copy_drivervariable_attr(v1, v2, print_fails)
                 for i in range(len(v1.targets)):
-                    copy_attributes(v1.targets[i], v2.targets[i])
+                    copy_drivertarget_attr(v1.targets[i], v2.targets[i], print_fails)
                     # Switch self reference targets to new self
                     if v2.targets[i].id == src:
                         v2.targets[i].id = dst
@@ -329,7 +409,7 @@ def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
                     d2.keyframe_points.add()
                     k1 = d1.keyframe_points[i]
                     k2 = d2.keyframe_points[i]
-                    copy_attributes(k1, k2)
+                    copy_keyframepoints_attr(k1, k2, print_fails)
             except TypeError:
                 pass
 
