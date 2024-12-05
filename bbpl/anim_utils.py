@@ -224,9 +224,6 @@ class ProxyCopy_NlaStrip:
         # nla_strip.type = self.type  # Read only
 
 
-
-
-
 class ProxyCopy_StripFCurve():
     """
     Proxy class for copying bpy.types.NlaStripFCurves. (NLA Strip only)
@@ -248,7 +245,6 @@ class ProxyCopy_StripFCurve():
                 for key in self.keyframe_points:
                     new_key = fcurve.keyframe_points.insert(frame=key.co[0], value=key.co[1], keyframe_type=key.type)
                     new_key.interpolation = key.interpolation
-
 
 
 class ProxyCopy_FCurve():
@@ -340,13 +336,6 @@ def copy_modifier_attr(a :bpy.types.FModifierGenerator, b :bpy.types.FModifierGe
     ]
     copy_attributes(a, b, priority_vars, ignore_list, print_fails)
 
-def copy_keyframepoints_attr(a :bpy.types.FCurveKeyframePoints, b :bpy.types.FCurveKeyframePoints, print_fails = True):
-    if not isinstance(a, bpy.types.FCurveKeyframePoints) or not isinstance(b, bpy.types.FCurveKeyframePoints):
-        raise TypeError(f"Expected 'bpy.types.FCurveKeyframePoints', but got {type(a).__name__} and {type(b).__name__}")
-    priority_vars = []
-    ignore_list = []
-    copy_attributes(a, b, priority_vars, ignore_list, print_fails)
-
 def copy_driver_attr(a: bpy.types.Driver, b: bpy.types.Driver, print_fails = True):
     if not isinstance(a, bpy.types.Driver) or not isinstance(b, bpy.types.Driver):
         raise TypeError(f"Expected 'bpy.types.Driver', but got {type(a).__name__} and {type(b).__name__}")
@@ -383,8 +372,6 @@ def copy_drivervariable_attr(a: bpy.types.DriverVariable, b: bpy.types.DriverVar
         "id_type",
     ]
     copy_attributes(a, b, priority_vars, ignore_list, print_fails)
-
-
 
 def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
     print_fails = False
@@ -425,15 +412,9 @@ def copy_drivers(src: bpy.types.Object, dst: bpy.types.Object):
                     if v2.targets[i].id == src:
                         v2.targets[i].id = dst
 
-            # Copy key frames
-            try:
-                for i in range(len(d1.keyframe_points)):
-                    d2.keyframe_points.add()
-                    k1 = d1.keyframe_points[i]
-                    k2 = d2.keyframe_points[i]
-                    copy_keyframepoints_attr(k1, k2, print_fails)
-            except TypeError:
-                pass
+            # Copy keyframes
+            copy_fcurve = ProxyCopy_FCurve(d1)
+            copy_fcurve.paste_data_on(d2)
 
 
 class AnimationManagment():
