@@ -174,10 +174,15 @@ class ProxyCopy_NlaStrip:
 
     def paste_data_on(self, nla_strip: bpy.types.NlaStrip):
 
-        # animated influence need to be set before all.
+        # influence and animated influence need to be set before all.
+        nla_strip.influence = 0.5
+        
+        # I don't know why but when I set use_animated_influence or influence 
+        # it automaticaly add a key in the curve...
+        # This is why I override and not do a simple paste
         nla_strip.use_animated_influence = self.use_animated_influence
         for fcurve in self.fcurves:
-            fcurve.paste_data_on(nla_strip)
+            fcurve.paste_data_on(nla_strip, override=True)
 
         # Auto Blend need to be set before the Blend values.
         if bpy.app.version >= (3, 0, 0):
@@ -236,15 +241,25 @@ class ProxyCopy_StripFCurve():
         self.keyframe_points: List[ProxyCopy_Keyframe] = []
         for keyframe_point in fcurve.keyframe_points:
             self.keyframe_points.append(ProxyCopy_Keyframe(keyframe_point))
+        self.print_stored_keys()
+
+    def print_stored_keys(self):
+        for key in self.keyframe_points:
+            key.print_stored_key()
 
 
-    def paste_data_on(self, strips: bpy.types.NlaStrip):
+    def paste_data_on(self, strips: bpy.types.NlaStrip, override=False):
+        #Found the corrected curve
         for fcurve in strips.fcurves:
             if self.data_path == "influence" and fcurve.data_path == "influence":
+                if override == True:
+                    fcurve.keyframe_points.clear()
+
                 # Create the curve with use_animated_influence
                 for key in self.keyframe_points:
+                    key.print_stored_key()
                     new_key = fcurve.keyframe_points.insert(frame=key.co[0], value=key.co[1], keyframe_type=key.type)
-                    new_key.interpolation = key.interpolation
+                    new_key.interpolation = key.interpolation        
 
 
 class ProxyCopy_FCurve():
@@ -279,10 +294,14 @@ class ProxyCopy_Keyframe():
         self.type = keyframe.type
         self.interpolation = keyframe.interpolation
 
+    def print_stored_key(self):
+        print(self.co, self.type, self.interpolation)
+
     def paste_data_on(self, keyframe: bpy.types.Keyframe):
         keyframe.co = self.co
         keyframe.type = self.type
         keyframe.interpolation = self.interpolation
+
 
 
 
