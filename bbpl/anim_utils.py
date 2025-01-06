@@ -241,7 +241,6 @@ class ProxyCopy_StripFCurve():
         self.keyframe_points: List[ProxyCopy_Keyframe] = []
         for keyframe_point in fcurve.keyframe_points:
             self.keyframe_points.append(ProxyCopy_Keyframe(keyframe_point))
-        self.print_stored_keys()
 
     def print_stored_keys(self):
         for key in self.keyframe_points:
@@ -259,7 +258,7 @@ class ProxyCopy_StripFCurve():
                 for key in self.keyframe_points:
                     key.print_stored_key()
                     new_key = fcurve.keyframe_points.insert(frame=key.co[0], value=key.co[1], keyframe_type=key.type)
-                    new_key.interpolation = key.interpolation        
+                    key.paste_data_on(new_key)
 
 
 class ProxyCopy_FCurve():
@@ -279,7 +278,7 @@ class ProxyCopy_FCurve():
         fcurve.data_path = self.data_path
         for key in self.keyframe_points:
             new_key = fcurve.keyframe_points.insert(frame=key.co[0], value=key.co[1], keyframe_type=key.type)
-            new_key.interpolation = key.interpolation
+            key.paste_data_on(new_key)
 
 
 class ProxyCopy_Keyframe():
@@ -290,17 +289,36 @@ class ProxyCopy_Keyframe():
     """
 
     def __init__(self, keyframe: bpy.types.Keyframe):
+        print(keyframe)
+        print(keyframe.type)
         self.co = keyframe.co
         self.type = keyframe.type
         self.interpolation = keyframe.interpolation
+        self.handle_left = keyframe.handle_left
+        self.handle_left_type = keyframe.handle_left_type
+        self.handle_right = keyframe.handle_right
+        self.handle_right_type = keyframe.handle_right_type
+        self.select_control_point = keyframe.select_control_point
+        self.select_left_handle = keyframe.select_left_handle
+        self.select_right_handle = keyframe.select_right_handle
+        
 
     def print_stored_key(self):
         print(self.co, self.type, self.interpolation)
 
     def paste_data_on(self, keyframe: bpy.types.Keyframe):
+        print(keyframe.interpolation)
         keyframe.co = self.co
         keyframe.type = self.type
         keyframe.interpolation = self.interpolation
+        keyframe.handle_left = self.handle_left
+        keyframe.handle_left_type = self.handle_left_type
+        keyframe.handle_right = self.handle_right
+        keyframe.handle_right_type = self.handle_right_type
+        keyframe.select_control_point = self.select_control_point
+        keyframe.select_left_handle = self.select_left_handle
+        keyframe.select_right_handle = self.select_right_handle
+        print(keyframe.interpolation)
 
 
 
