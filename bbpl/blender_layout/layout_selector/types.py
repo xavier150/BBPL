@@ -55,7 +55,7 @@ class StringSelector():
             if callable(string_selector.items):
                 value = getattr(property_self, string_selector.property_name)
                 for identifier, number in _dynamic_enum_values(string_selector.items(property_self, context)):
-                    if identifier == value:
+                    if identifier == value and not isinstance(property_self, bpy.types.NodeSocket):
                         property_self[string_selector.property_selector_name] = number
                         break
             else:
@@ -84,7 +84,7 @@ class StringSelector():
                 for identifier, number in items:
                     if identifier == value:
                         return number
-                previous = property_self.get(string_selector.property_selector_name)
+                previous = None if isinstance(property_self, bpy.types.NodeSocket) else property_self.get(string_selector.property_selector_name)
                 for _, number in items:
                     if number == previous:
                         return number
@@ -93,7 +93,8 @@ class StringSelector():
             def dynamic_set(property_self: Any, number: int):
                 for identifier, item_number in _dynamic_enum_values(string_selector.items(property_self, bpy.context)):
                     if item_number == number:
-                        property_self[string_selector.property_selector_name] = number
+                        if not isinstance(property_self, bpy.types.NodeSocket):
+                            property_self[string_selector.property_selector_name] = number
                         if getattr(property_self, string_selector.property_name) != identifier:
                             setattr(property_self, string_selector.property_name, identifier)
                         return
