@@ -39,7 +39,8 @@ class SkinWeightMeshUpdater:
         for old_name in old_names:
             vg_old = obj.vertex_groups.get(old_name)
             if not vg_old:
-                print(f"The vertex group '{old_name}' does not exist in the object.")
+                if self.print_log:
+                    print(f"The vertex group '{old_name}' does not exist in the object: '{obj.name}'.")
                 continue
             
             # Check if the new vertex group already exists, if not, create it
@@ -55,7 +56,8 @@ class SkinWeightMeshUpdater:
 
             # Remove the old vertex group
             obj.vertex_groups.remove(vg_old)
-            print(f"The vertex group '{old_name}' has been renamed to '{new_name}'.")
+            if self.print_log:
+                print(f"The vertex group '{old_name}' has been renamed to '{new_name}'.")
             self.update_weights += 1
 
     def print_update_log(self):
