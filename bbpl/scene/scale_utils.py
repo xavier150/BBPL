@@ -61,6 +61,32 @@ def scale_objects(
             obj.scale *= scale_factor
 
 
+def scale_user_view(
+    scale_factor: float,
+    use_view: bool = True,
+    use_clip: bool = True,
+) -> None:
+    """Scale saved 3D viewport pivots/distances and clipping, without moving scene cameras."""
+    _validate_scale_factor(scale_factor)
+
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            for space in area.spaces:
+                if not isinstance(space, bpy.types.SpaceView3D):
+                    continue
+                if use_view:
+                    regions = list(space.region_quadviews)
+                    if not regions and space.region_3d is not None:
+                        regions.append(space.region_3d)
+                    for region in regions:
+                        if region.view_perspective != 'CAMERA':
+                            region.view_location *= scale_factor
+                            region.view_distance *= scale_factor
+                if use_clip:
+                    space.clip_start *= scale_factor
+                    space.clip_end *= scale_factor
+
+
 def _iter_action_fcurves(action: bpy.types.Action) -> Iterator[bpy.types.FCurve]:
     if bpy.app.version >= (4, 4, 0):
         for slot in action.slots:
