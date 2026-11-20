@@ -7,10 +7,13 @@
 #  https://github.com/xavier150/BBPL
 # ----------------------------------------------
 
+import re
 from typing import Iterable, List, Optional, cast
 
 import bpy
 from bpy_extras import anim_utils
+
+_BONE_PATH = re.compile(r'^pose\.bones\["((?:\\.|[^"\\])*)"\](?:\.|\[|$)')
 
 
 def get_used_actions(obj: bpy.types.Object) -> List[bpy.types.Action]:
@@ -41,14 +44,11 @@ def _fcurves_match_armature(
     if not isinstance(obj.data, bpy.types.Armature):
         return False
 
+    bone_names = {bpy.utils.escape_identifier(bone.name) for bone in obj.data.bones}
     for fcurve in fcurves:
-        data_path = fcurve.data_path
-        start = data_path.find('["')
-        end = data_path.rfind('"]')
-        if start > 0 and end > 0:
-            bone_name = data_path[start + 2:end]
-            if bone_name in obj.data.bones:
-                return True
+        match = _BONE_PATH.match(fcurve.data_path)
+        if match is not None and match.group(1) in bone_names:
+            return True
 
     return False
 
