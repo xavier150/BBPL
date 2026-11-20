@@ -43,11 +43,18 @@ def scale_objects(
     use_scale: bool = True,
     white_list: Optional[Iterable[bpy.types.Object]] = None,
     black_list: Optional[Iterable[bpy.types.Object]] = None,
+    scene_only: bool = True,
 ) -> None:
-    """Scale object location and/or scale; an empty whitelist means all non-black-listed objects."""
+    """Scale object transforms, limited to the active scene by default; an empty whitelist does not filter."""
     _validate_scale_factor(scale_factor)
 
-    for obj in _iter_filtered_items(bpy.data.objects, white_list, black_list):
+    objects: Iterable[bpy.types.Object] = bpy.data.objects
+    if scene_only:
+        scene = bpy.context.scene
+        if scene is None:
+            raise RuntimeError("An active scene is required when scene_only is enabled.")
+        objects = scene.objects
+    for obj in _iter_filtered_items(objects, white_list, black_list):
         if use_location:
             obj.location *= scale_factor
         if use_scale:
@@ -196,11 +203,18 @@ def scale_rigs_data(
     use_armature_constraint: bool = True,
     use_modifiers: bool = True,
     use_curve_hooks: bool = True,
+    scene_only: bool = True,
 ) -> None:
-    """Scale selected rig data categories without applying object transforms."""
+    """Scale rig data without applying object transforms, limited to the active scene by default."""
     _validate_scale_factor(scale_factor)
 
-    for obj in _iter_filtered_items(bpy.data.objects, white_list, black_list):
+    objects: Iterable[bpy.types.Object] = bpy.data.objects
+    if scene_only:
+        scene = bpy.context.scene
+        if scene is None:
+            raise RuntimeError("An active scene is required when scene_only is enabled.")
+        objects = scene.objects
+    for obj in _iter_filtered_items(objects, white_list, black_list):
         if use_armature_constraint:
             _scale_armature_constraints(obj, scale_factor)
         if use_shape_key_drivers:
