@@ -63,24 +63,28 @@ def copy_rig_group(obj: bpy.types.Object, source: bpy.types.Object) -> None:
     """
     Copy the rigging weights from the source object to the target object.
     """
-    bbpl.utils.mode_set_on_target(obj, "OBJECT")
+    if obj.type != 'MESH' or source.type != 'MESH':
+        raise ValueError("Weight transfer requires mesh objects for both destination and source.")
+    if obj == source:
+        raise ValueError("Weight transfer requires different destination and source objects.")
+    if not bbpl.utils.mode_set_on_target(obj, "OBJECT"):
+        raise RuntimeError(f"Could not enter Object Mode for weight transfer on {obj.name}.")
 
     mod_name = "MAR_RigWeightTransfer"
 
-    for old_mod in obj.modifiers:
-        if old_mod.name == mod_name:
-            obj.modifiers.remove(old_mod)  # type: ignore
-
-    remove_vertex_groups(obj)
+    old_mod = obj.modifiers.get(mod_name)
+    if old_mod:
+        obj.modifiers.remove(old_mod)  # type: ignore
 
     mod = obj.modifiers.new(name=mod_name, type='DATA_TRANSFER')  # type: ignore
-    while obj.modifiers[0].name != mod_name:
-        bpy.ops.object.modifier_move_up(modifier=mod_name)  # type: ignore
-
+    if mod is None:
+        raise RuntimeError(f"Could not create a weight transfer modifier on {obj.name}.")
+    obj.modifiers.move(obj.modifiers.find(mod.name), 0)  # type: ignore
 
     mod.object = source  # type: ignore
     mod.use_vert_data = True  # type: ignore
     mod.data_types_verts = {'VGROUP_WEIGHTS'}  # type: ignore
+    remove_vertex_groups(obj)
     bpy.ops.object.datalayout_transfer(modifier=mod_name, data_type="VGROUP_WEIGHTS")  # type: ignore
     bpy.ops.object.modifier_apply(modifier=mod_name)  # type: ignore
 
