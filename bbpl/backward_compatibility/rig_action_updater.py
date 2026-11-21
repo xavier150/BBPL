@@ -130,7 +130,8 @@ class RigActionUpdater:
                         print(f"{old_data_path} not found in {current_target} for action {action.name}.")
 
     def remove_action_curve_by_data_path(
-        self, action: bpy.types.Action, data_paths: List[str], *, exact_match: bool = False,
+        self, action: bpy.types.Action, data_paths: List[str], *,
+        exact_match: bool = False, starts_with: bool = False,
     ) -> None:
         """
         Remove FCurves from a given action based on specified data paths.
@@ -139,15 +140,19 @@ class RigActionUpdater:
             action (bpy.types.Action): The Blender action containing FCurves to be checked and removed.
             data_paths (list of str): A list of data paths to identify FCurves for removal.
             exact_match (bool, optional): Match the entire data path instead of a substring.
+            starts_with (bool, optional): Match a prefix instead of a substring.
 
         Returns:
             None
         """
+        if exact_match and starts_with:
+            raise ValueError("exact_match and starts_with cannot both be enabled.")
         for fcurves in self._fcurve_collections(action):
-            self._remove_from_fcurve_collection(action, fcurves, data_paths, exact_match)
+            self._remove_from_fcurve_collection(action, fcurves, data_paths, exact_match, starts_with)
 
     def _remove_from_fcurve_collection(
-        self, action: bpy.types.Action, fcurves: "_FCurveCollection", data_paths: List[str], exact_match: bool,
+        self, action: bpy.types.Action, fcurves: "_FCurveCollection", data_paths: List[str],
+        exact_match: bool, starts_with: bool,
     ) -> None:
         cache_action_fcurves: List[bpy.types.FCurve] = []
         for fcurve in fcurves:
@@ -156,7 +161,11 @@ class RigActionUpdater:
         for action_fcurve in cache_action_fcurves:
             for data_path in data_paths:
                 current_target = action_fcurve.data_path
-                if (current_target == data_path if exact_match else data_path in current_target):
+                if (
+                    current_target == data_path if exact_match
+                    else current_target.startswith(data_path) if starts_with
+                    else data_path in current_target
+                ):
 
                     # ---
 
